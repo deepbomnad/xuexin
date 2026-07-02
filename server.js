@@ -54,12 +54,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// ============ 其他中间件 ============
-app.use(cors());
-app.use(bodyParser.json({ limit: '10mb' }));
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.static(__dirname));
-
 // ============ 内存数据库 ============
 const memoryDB = {
     users: [],
@@ -94,13 +88,18 @@ function deleteUserAndData(userId) {
 }
 
 // ============ 页面路由 ============
-app.get('/first.html', (req, res) => {
+app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'first.html'));
 });
 
 app.get('/admin-activation.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin-activation.html'));
 });
+// ============ 其他中间件 ============
+app.use(cors());
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static(__dirname));
 
 // ============ 健康检查 ============
 app.get('/health', (req, res) => {
