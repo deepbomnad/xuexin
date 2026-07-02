@@ -24,7 +24,6 @@ if (process.env.DEPLOY_DATE) {
   }
 }
 
-
 if (!startDate) {
   try {
     if (fs.existsSync(DEPLOY_FILE)) {
@@ -69,6 +68,8 @@ const memoryDB = {
             note: '永久激活码'
         }
     ],
+    // ===== 新增：历史生成总数计数器，删除时不减少 =====
+    totalCodesGenerated: 1,  // 初始默认有 1 个激活码，所以设为 1
     student_status: [],
     education: [],
     degree: [],
@@ -95,6 +96,7 @@ app.get('/', (req, res) => {
 app.get('/admin-activation.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin-activation.html'));
 });
+
 // ============ 其他中间件 ============
 app.use(cors());
 app.use(bodyParser.json({ limit: '10mb' }));
@@ -108,6 +110,7 @@ app.get('/health', (req, res) => {
         service: '学信档案系统',
         database: 'memory',
         activation_codes: memoryDB.activationCodes.length,
+        total_codes_generated: memoryDB.totalCodesGenerated,  // 新增
         users: memoryDB.users.length,
         timestamp: new Date().toISOString()
     });
@@ -174,6 +177,9 @@ app.post('/api/admin/generate-codes', (req, res) => {
             memoryDB.activationCodes.push(activationCode);
             codes.push(activationCode);
         }
+        // ===== 新增：生成后，历史总数增加 =====
+        memoryDB.totalCodesGenerated += count;
+
         res.json({
             success: true,
             data: codes,
@@ -188,7 +194,8 @@ app.post('/api/admin/generate-codes', (req, res) => {
 app.post('/api/admin/list-codes', (req, res) => {
     try {
         const now = new Date();
-        const total = memoryDB.activationCodes.length;
+        // ===== 修改：总数使用历史生成总数，而不是当前数组长度 =====
+        const total = memoryDB.totalCodesGenerated;
         const used = memoryDB.activationCodes.filter(c => c.is_used).length;
         const unused = memoryDB.activationCodes.filter(c => !c.is_used).length;
         const expired = memoryDB.activationCodes.filter(c => {
@@ -198,7 +205,7 @@ app.post('/api/admin/list-codes', (req, res) => {
         res.json({
             success: true,
             data: memoryDB.activationCodes,
-            total: total,
+            total: total,           // ← 使用历史生成总数
             used: used,
             unused: unused,
             expired: expired
@@ -220,6 +227,8 @@ app.post('/api/admin/delete-code', (req, res) => {
         }
         const index = memoryDB.activationCodes.findIndex(c => c.code === code);
         memoryDB.activationCodes.splice(index, 1);
+        
+        // ===== 注意：删除时 totalCodesGenerated 不变 =====
         res.json({
             success: true,
             message: codeEntry.is_used ? '激活码已删除，关联账号及数据已被永久删除' : '激活码已删除'
