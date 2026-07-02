@@ -94,7 +94,7 @@ function deleteUserAndData(userId) {
 }
 
 // ============ 页面路由 ============
-app.get('/', (req, res) => {
+app.get('/first.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'first.html'));
 });
 
